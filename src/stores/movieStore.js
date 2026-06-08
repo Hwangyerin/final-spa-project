@@ -7,6 +7,7 @@ export const useMovieStore = defineStore('movie', () => {
   const favorites = ref(JSON.parse(sessionStorage.getItem('favorites')) || []);
   const isLoading = ref(false);
   const errorMessage = ref('');
+  const selectedMovie = ref(null);
   const fetchMovies = async () => {
     isLoading.value = true;
     errorMessage.value = '';
@@ -41,24 +42,53 @@ export const useMovieStore = defineStore('movie', () => {
       isLoading.value =false;
     }
   };
-
-  const toggleFavorite = (movieId) => {
-    const movie = movies.value.find(m => m.id === movieId);
-    if (movie) {
-      movie.isFavorite = !movie.isFavorite;
-      if (movie.isFavorite) {
-        favorites.value.push(movie);
+  
+  const fetchMovieDetail = async (movieId) => {
+    isLoading.value = true;
+    errorMessage.value = '';
+    selectedMovie.value = null;
+    
+    try {
+      const API_KEY = '68a20f57da01c834b796775a29985087';
+      const url = 'https://api.themoviedb.org/3/movie/${movie.id}';
+      
+      const response = await axios.get(url, {
+        params: {
+          api_key: API_KEY,
+          language: 'ko-KR',
+        }
+      });
+      selectedMovie.value = response.data;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        errorMessage.value = '존재하지 않거나 삭제된 영화 정보입니다.';
       } else {
-        favorites.value = favorites.value.filter(fav => fav.id !== movieId);
+        errorMessage.value = '서버 통신 중 에러가 발생했습니다.';
       }
-      sessionStorage.setItem('favorites', JSON.stringify(favorites.value));
+    } finally {
+      isLoading.value = false;
     }
   };
+  
+    const toggleFavorite = (movieId) => {
+      const movie = movies.value.find(m => m.id === movieId);
+      if (movie) {
+        movie.isFavorite = !movie.isFavorite;
+        if (movie.isFavorite) {
+          favorites.value.push(movie);
+        } else {
+          favorites.value = favorites.value.filter(fav => fav.id !== movieId);
+        }
+        sessionStorage.setItem('favorites', JSON.stringify(favorites.value));
+      }
+    };
+    
   return {
     movies,
     favorites,
     isLoading,
     errorMessage,
+    selectedMovie,
     fetchMovies,
     toggleFavorite
   };
