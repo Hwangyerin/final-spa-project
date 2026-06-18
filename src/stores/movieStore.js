@@ -50,7 +50,7 @@ export const useMovieStore = defineStore('movie', () => {
     
     try {
       const API_KEY = '68a20f57da01c834b796775a29985087';
-      const url = 'https://api.themoviedb.org/3/movie/${movie.id}';
+      const url = `https://api.themoviedb.org/3/movie/${movieId}`;
       
       const response = await axios.get(url, {
         params: {
@@ -90,6 +90,7 @@ export const useMovieStore = defineStore('movie', () => {
     errorMessage,
     selectedMovie,
     fetchMovies,
+    fetchMovieDetail,
     toggleFavorite
   };
 });

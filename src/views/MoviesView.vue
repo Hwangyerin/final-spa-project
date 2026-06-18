@@ -24,6 +24,7 @@ onMounted(() => {
     </div>
     <div v-else class="movie-list">
       <div v-for="movie in store.movies" :key="movie.id" class="movie-card">
+        <RouterLink :to="`/movies/${movie.id}`" class="stretched-link" :aria-label="movie.title"></RouterLink>
         <img
           v-if="movie.poster_path"
           :src="`https://image.tmdb.org/t/p/w500${movie.poster_path}`"
