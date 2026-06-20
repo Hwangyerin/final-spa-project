@@ -1,20 +1,56 @@
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useMovieStore } from '../stores/movieStore';
 
 const store = useMovieStore();
+const sortType = ref('');
+const currentPage = ref(1);
+const MOVIES_PER_PAGE = 8;
+
+const sortedMovies = computed(() => {
+  const list = [...store.movies];
+  if (sortType.value === 'title') {
+    list.sort((a, b) => a.title.localeCompare(b.title, 'ko'));
+  } else if (sortType.value === 'release_date') {
+    list.sort((a, b) => {
+      if (a.release_date < b.release_date) return 1;
+      if (a.release_date > b.release_date) return -1;
+      return 0;
+    });
+  } else if (sortType.value === 'vote_average') {
+    list.sort((a, b) => b.vote_average - a.vote_average);
+  }
+  return list;
+});
+
+const totalPages = computed(() => Math.ceil(sortedMovies.value.length / MOVIES_PER_PAGE));
+
+const paginatedMovies = computed(() => {
+  const start = (currentPage.value - 1) * MOVIES_PER_PAGE;
+  return sortedMovies.value.slice(start, start + MOVIES_PER_PAGE);
+});
+
+const setSort = (type) => {
+  sortType.value = sortType.value === type ? '' : type;
+  currentPage.value = 1;
+};
 
 onMounted(() => {
   store.fetchMovies();
-  document.title = '🍿 국내 극장 화제작(인기순)';
+  document.title = '🍿 국내 극장 화제작';
 });
 </script>
 
 <template>
   <main class="page">
     <div class="header-section">
-      <h1>🍿 국내 극장 화제작 (인기순)</h1>
+      <h1>🍿 국내 극장 화제작</h1>
       <p class="sub-title">2025년 이후 국내 정식 개봉한 실시간 인기 상영작</p>
+    </div>
+    <div v-if="!store.isLoading && !store.errorMessage" class="sort-bar">
+      <button @click="setSort('title')" :class="{ active: sortType === 'title' }" class="sort-btn">제목순</button>
+      <button @click="setSort('release_date')" :class="{ active: sortType === 'release_date' }" class="sort-btn">개봉일순</button>
+      <button @click="setSort('vote_average')" :class="{ active: sortType === 'vote_average' }" class="sort-btn">평점순</button>
     </div>
     <div v-if="store.isLoading" class="status-message loading">
       ⏳ 실시간 국내 개봉작 데이터를 싣고 오는 중입니다...
@@ -22,8 +58,9 @@ onMounted(() => {
     <div v-else-if="store.errorMessage" class="status-message error">
       🚨 {{ store.errorMessage }}
     </div>
-    <div v-else class="movie-list">
-      <div v-for="movie in store.movies" :key="movie.id" class="movie-card">
+    <div v-else>
+      <div class="movie-list">
+      <div v-for="movie in paginatedMovies" :key="movie.id" class="movie-card">
         <RouterLink :to="`/movies/${movie.id}`" class="stretched-link" :aria-label="movie.title"></RouterLink>
         <img
           v-if="movie.poster_path"
@@ -46,6 +83,16 @@ onMounted(() => {
           > {{ movie.isFavorite ? '♥ 찜 해제' : '♡ 찜하기' }}
           </button>
         </div>
+      </div>
+      </div>
+      <div class="pagination" v-if="totalPages > 1">
+        <button
+          v-for="page in totalPages"
+          :key="page"
+          @click="currentPage = page"
+          :class="{ active: currentPage === page }"
+          class="page-btn"
+        >{{ page }}</button>
       </div>
     </div>
   </main>
@@ -74,12 +121,16 @@ font-weight:bold;}
 .fav-btn { position: relative; z-index: 2; width: 100%; padding: 12px; cursor: pointer; border: none; background: #ecf0f1; color: #333;
 border-radius: 8px; font-weight: bold; font-size: 14px; transition: 0.3s; margin-top: auto;}
 .fav-btn.active { background: #ff4757; color: white;}
-.stretched-link {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-}
+.sort-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; justify-content: flex-end;}
+.sort-label { font-size: 14px; font-weight: bold; color: #555;}
+.sort-btn { padding: 8px 18px; border: 2px solid #bdc3c7; background: white; color: #555; border-radius: 20px; font-size: 13px;
+font-weight: bold; cursor: pointer; transition: 0.2s;}
+.sort-btn:hover { border-color: #ff4757; color: #ff4757;}
+.sort-btn.active { background: #ff4757; color: white; border-color: #ff4757;}
+.stretched-link { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1;}
+.pagination { display: flex; justify-content: center; gap: 8px; margin-top: 40px; flex-wrap: wrap;}
+.page-btn { width: 40px; height: 40px; border: 2px solid #bdc3c7; background: white; color: #555; border-radius: 50%;
+font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+.page-btn:hover { border-color: #ff4757; color: #ff4757;}
+.page-btn.active { background: #ff4757; color: white; border-color: #ff4757;}
 </style>
